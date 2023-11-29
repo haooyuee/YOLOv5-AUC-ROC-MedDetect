@@ -1,3 +1,5 @@
+If ta helps you, I'm happy, but a star would make me happy a lot. 
+
 # YOLOv5 AUROC Extension
 
 This repository contains an enhancement of the YOLOv5 object detection framework to incorporate the calculation of the Area Under the Receiver Operating Characteristic curve (AUROC) per class, which plays a crucial role in evaluating model performance, especially in the domain of medical imaging.
