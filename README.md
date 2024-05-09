@@ -49,9 +49,39 @@ This calculated AUROC can then be visualized and analyzed to comprehend the perf
 
 Ensure that the modifications are properly integrated into your YOLOv5 setup. During training or validation, the AUROC per class, as well as relevant curves, should be computed and can be visualized for detailed model performance analysis.
 
+In LOG, will update mAUC value at each validation epoch. Then added a new AUC column at the end of the training.
+
+```
+      Epoch    GPU_mem   box_loss   obj_loss   cls_loss  Instances       Size
+       1/99      4.64G    0.04494    0.06671    0.01729        301        640: 100%|██████████| 8/8 [00:21<00:00,  2.70s/it]
+                 Class     Images  Instances          P          R      mAP50   mAP50-95       mAUC: 100%|██████████| 4/4 [00:10<00:00,  2.51s/it]
+                   all        128        929      0.709      0.276       0.31      0.206     0.0534
+```
+
+```
+Model summary: 157 layers, 7225885 parameters, 0 gradients, 16.4 GFLOPs
+                 Class     Images  Instances          P          R      mAP50   mAP50-95       mAUC: 100%|██████████| 4/4 [00:09<00:00,  2.38s/it]
+                   all        128        929      0.679      0.258      0.305      0.201     0.0618
+                person        128        254      0.847      0.354      0.411      0.254      0.947
+               bicycle        128          6      0.789      0.631      0.673      0.391          0
+                   car        128         46      0.604      0.283      0.402       0.16          0
+            motorcycle        128          5      0.488        0.2      0.203      0.183          0
+...
+...
+...
+```
+
 ### Integration with Weights and Biases (WandB)
 
 The modified code allows for tracking the AUROC scores for each class on Weights and Biases (WandB) during the training phase. This aids in the real-time monitoring of model performance across different classes. Moreover, upon the completion of training, AUROC curves and radar charts will be generated and saved, providing a visual representation of the model's discriminative ability across classes.
+
+When the training is complete, we will generate a polar_chart figure of AUC and a auroc_curve figure.
+Taking the vindr CXR dataset as an example, the results of the two figures are:
+![image](images/AUROC_Curve.png)
+![image](images/polar_chart.png)
+
+At the same time, during experiment uses wandb, and the ROC change curve of each class will be update during training.
+![image](images/Wandb.png)
 
 ## Acknowledgements
 
