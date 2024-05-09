@@ -307,8 +307,8 @@ def run(
     # Plots
     if plots:
         confusion_matrix.plot(save_dir=save_dir, names=list(names.values()))
-        aucroc.plot_polar_chart(auc_scores, save_dir=save_dir, names=list(names.values()))
         aucroc.plot_auroc_curve(fpr_, tpr_, auc_scores, save_dir=save_dir, names=list(names.values()))
+        aucroc.plot_polar_chart(auc_scores, save_dir=save_dir, names=list(names.values()))
         callbacks.run('on_val_end', nt, tp, fp, p, r, f1, ap, ap50, ap_class, confusion_matrix)
 
     # Save JSON

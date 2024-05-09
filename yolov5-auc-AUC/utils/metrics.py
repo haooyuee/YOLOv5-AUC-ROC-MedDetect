@@ -140,10 +140,13 @@ class AUROC:
 
         self.pred = [[] for _ in range(nc)]  # list to store model predictions for each class
         self.true = [[] for _ in range(nc)]  # list to store ground truth labels for each class
-
-        import subprocess
-        subprocess.check_call(['pip', 'install', 'scikit-learn'])
-        subprocess.check_call(['pip', 'install', 'plotly', 'kaleido'])
+        try:
+            import subprocess
+            subprocess.check_call(['pip', 'install', 'scikit-learn'])
+            #subprocess.check_call(['pip', 'install', 'plotly', 'kaleido'])
+            print("Packages installed successfully.")
+        except subprocess.CalledProcessError as e:
+            print("Failed to install packages:", e)
 
     def process_batch(self, detections, labels):
         """
@@ -231,46 +234,111 @@ class AUROC:
 
         return auc_scores, fpr_, tpr_
 
-    def plot_polar_chart(self, auc_scores, save_dir='', names=()):
-        '''
-        Generate polar_chart for auc scores.
-        auc_scores : [dict] auc_scores
-        names : [list] cls names
-        return None
-        save img at Path(save_dir) / 'polar_chart.png'
-        '''
-        import plotly.graph_objects as go
-        mauc = auc_scores.mean()
+    def plot_polar_chart(self, auc_scores, save_dir='', names=(), threshold=0.5, include_mean=True):
+        """
+        Generate a polar chart for AUC scores using matplotlib.
+        Includes mean AUC if 'include_mean' is True and classes count is more than 10.
+
+        Parameters:
+        - auc_scores: List of AUC scores.
+        - names: Class names corresponding to AUC scores.
+        - save_dir: Directory to save the chart image.
+        - threshold: Threshold to filter classes by AUC score.
+        - include_mean: Boolean to include mean AUC in the chart.
+        """
+        # Calculate mean AUC and prepare data
+        mauc = sum(auc_scores) / len(auc_scores)
         auc_scores_name = dict(zip(names, auc_scores))
-        auc_scores_name['mAUC'] = mauc
-        df = pd.DataFrame.from_dict(auc_scores_name, orient='index')
-        columns = list(df.index)
-        fig = go.Figure(
-            data=[go.Scatterpolar(r=(df[0] * 100).round(0), fill='toself', name='diseases', theta=columns)],
-            layout=go.Layout(
-                # title=go.layout.Title(text='Class AUC'),
-                polar={
-                    'radialaxis': {
-                        'range': [0, 100],
-                        'tickvals': [0, 25, 50, 75, 100],
-                        'ticktext': ['0%', '25%', '50%', '75%', '100%'],
-                        'visible': True, }},
-                showlegend=True,
-                template='plotly_dark',
-            ),
-        )
-        file_name = Path(save_dir) / 'polar_chart.png'
-        fig.write_image(file_name)
-        # print('plot_polar_chart DONE')
+
+        # Filter and prepare data
+        if len(auc_scores) > 10:
+            filtered_scores = {name: score for name, score in auc_scores_name.items() if score > threshold}
+        else:
+            filtered_scores = auc_scores_name
+        if include_mean:
+                filtered_scores['mAUC'] = mauc
+
+        df = pd.DataFrame.from_dict(filtered_scores, orient='index', columns=['AUC'])
+        angles = np.linspace(0, 2 * np.pi, len(df), endpoint=False)  # angles for polar plot
+
+        # Prepare data for plot
+        auc_scores_complete = df['AUC'].tolist() + [df['AUC'].iloc[0]]
+        angles_complete = np.append(angles, angles[0])  # Complete the loop
+
+        # Setup polar plot
+        fig, ax = plt.subplots(figsize=(8, 8), subplot_kw={'projection': 'polar'})
+        ax.fill(angles_complete, auc_scores_complete, 'b', alpha=0.3)
+        ax.plot(angles_complete, auc_scores_complete, 'b')
+
+        # Set labels
+        ax.set_xticks(angles)
+        ax.set_xticklabels(df.index)
+
+        ax.set_ylim(0, 1)
+        ax.set_title('AUROC Polar Chart', size=15, color='r', verticalalignment='bottom')
+
+        # Save plot
+        if save_dir:
+            Path(save_dir).mkdir(parents=True, exist_ok=True)
+            file_path = Path(save_dir) / 'polar_chart.png'
+            plt.savefig(file_path, bbox_inches='tight')
+            print(f"Chart saved to {file_path}")
+        plt.close(fig)
+
+    # def plot_polar_chart(self, auc_scores, save_dir='', names=()):
+    #     '''
+    #     Generate polar_chart for auc scores.
+    #     auc_scores : [dict] auc_scores
+    #     names : [list] cls names
+    #     return None
+    #     save img at Path(save_dir) / 'polar_chart.png'
+    #     '''
+    #     import plotly.graph_objects as go
+    #     mauc = auc_scores.mean()
+    #     auc_scores_name = dict(zip(names, auc_scores))
+    #     # Filter classes if there are more than 10
+    #     if len(auc_scores) > 10:
+    #         # Include only classes with AUC > 0.5 plus the mean AUC
+    #         filtered_scores = {name: score for name, score in auc_scores_name.items() if score > 0.5}
+    #         filtered_scores['mAUC'] = mauc  # Adding mean AUC to the filtered results
+    #     else:
+    #         filtered_scores = auc_scores_name
+    #         filtered_scores['mAUC'] = mauc  # Include mean AUC in the results
+
+    #     df = pd.DataFrame.from_dict(filtered_scores, orient='index')
+    #     columns = list(df.index)
+    #     fig = go.Figure(
+    #         data=[go.Scatterpolar(r=(df[0] * 100).round(0), fill='toself', name='diseases', theta=columns)],
+    #         layout=go.Layout(
+    #             # title=go.layout.Title(text='Class AUC'),
+    #             polar={
+    #                 'radialaxis': {
+    #                     'range': [0, 100],
+    #                     'tickvals': [0, 25, 50, 75, 100],
+    #                     'ticktext': ['0%', '25%', '50%', '75%', '100%'],
+    #                     'visible': True, }},
+    #             showlegend=True,
+    #             template='plotly_dark',
+    #         ),
+    #     )
+    #     file_name = Path(save_dir) / 'polar_chart.png'
+    #     # fig.write_image(Path(save_dir) / 'polar_chart.png')
+    #     # print('plot_polar_chart DONE')
+    #     try:
+    #         print('start saving')
+    #         fig.write_image(file_name)
+    #         print(f"Saved plot_polar_chart at: {file_name}")
+    #     except Exception as e:
+    #         print(f"Error saving the file: {e}")
 
     def plot_auroc_curve(self, fpr_, tpr_, auc_scores, save_dir='', names=()):
         # AUROC curve
         fig, ax = plt.subplots(1, 1, figsize=(9, 6), tight_layout=True)
 
-        if 0 < len(names) < 21:  # display per-class legend if < 21 classes
+        if 0 < len(names) < 21:  # display per-class show label if < 21 classes
             for i in range(len(names)):
                 ax.plot(fpr_[i], tpr_[i], linewidth=1, label=f'{names[i]} {auc_scores[i]:.3f}')  # plot(F_PR, T_PR)
-        else:
+        else: # display all-class with grey line not show label
             for i in range(len(names)):
                 ax.plot(fpr_[i], tpr_[i], linewidth=1, color='grey')  # plot(F_PR, T_PR)
 
@@ -284,10 +352,8 @@ class AUROC:
         if save_dir:
             save_path = Path(save_dir) / 'auroc_curve.png'
             fig.savefig(save_path, dpi=250)
-            # print(f'Saved AUROC curve at: {save_path}')
+            print(f"AUROC curve saved to {save_path}")
         plt.close(fig)
-        # print('plot_auroc_curve DONE')
-
 
 class ConfusionMatrix:
     # Updated version of https://github.com/kaanakan/object_detection_confusion_matrix
